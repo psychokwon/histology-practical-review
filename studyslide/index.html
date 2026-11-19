@@ -85,7 +85,6 @@ var D=JSON.parse(document.getElementById('data').textContent);
 var IMGP=D.imgp, Q=D.Q, WB=D.wb, KEY='histoPracEN_'+D.ver+(D.kv||'_v1'), TL=60, QA=D.Q, KB=KEY, MODE='all';
 function $(id){return document.getElementById(id)}
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-function OKA(a,q){var n=norm(a);return n===norm(q.answer)||(q.alt||[]).some(function(x){return norm(x)===n})}
 function norm(s){return String(s||'').replace(/[\u2018\u2019\u02bc]/g,"'").trim().replace(/\s+/g,' ').toLowerCase()}
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function shuffle(n,seed){var r=mulberry32(seed),a=[],i;for(i=0;i<n;i++)a.push(i);
@@ -140,11 +139,11 @@ function exHTML(q){var e=q.ex||{},h='';
  h+='<div class="exsec"><div class="exh">Explanation</div><p>'+esc(e.body||q.basis)+'</p></div>';
  if(e.others&&e.others.length)h+='<div class="exsec"><div class="exh">Other structures you may be asked in this image</div><ul>'+e.others.map(function(s){return '<li>'+esc(s)+'</li>'}).join('')+'</ul></div>';
  if(e.one)h+='<div class="exsec one"><b>One-line summary:</b> '+esc(e.one)+'</div>';
- if(q.note)h+='<div class="exsec notes"><div class="exh">'+(q.notelbl==='Related notes'?'Related notes <span class="nlbl">same-topic page</span>':(q.notelbl==='Original slide'?'Original lab slide':q.notelbl==='Handout page'?'Lab handout page':'Class notes'))+'</div><img class="noteimg" loading="lazy" decoding="async" src="'+q.note+'" alt="handwritten note page (tap to zoom)"></div>';
+ if(q.note)h+='<div class="exsec notes"><div class="exh">'+(q.notelbl==='Related notes'?'Related notes <span class="nlbl">same-topic page</span>':'Class notes')+'</div><img class="noteimg" loading="lazy" decoding="async" src="'+q.note+'" alt="handwritten note page (tap to zoom)"></div>';
  return h+'<div class="src">Source: '+esc(q.src)+'</div>'}
 function reveal(restore,timeout){clearInterval(tick);var q=Q[S.order[S.idx]],inp=$('qin');
  if(!restore){S.answers[S.idx]=inp.value;S.pending=inp.value;S.revealed=true;S.deadline=null;save()}
- var a=S.answers[S.idx]||'',r=OKA(a,q);inp.value=a;inp.readOnly=true;if(NARROW())inp.blur();
+ var a=S.answers[S.idx]||'',r=norm(a)===norm(q.answer);inp.value=a;inp.readOnly=true;if(NARROW())inp.blur();
  $('fb').innerHTML=(timeout?'<div class="muted">Time&rsquo;s up &mdash; the answer has been revealed automatically.</div>':'')+'<div class="verdict '+(r?'ok':'bad')+'">'+(r?'&#10003; Correct!':'&#10007; Incorrect')+'</div>'+
   '<div class="fbline">Your answer: <b>'+(a.trim()?esc(a):'<span class="muted">(blank)</span>')+'</b></div><div class="fbline">Answer: <b class="answ">'+esc(q.answer)+'</b>'+(q.unc?'<span class="unc">Uncertain</span>':'')+'</div>'+exHTML(q);
  $('fb').style.display='block';document.body.classList.add('revealed');$('chkb').style.display='none';$('nextb').style.display='';
@@ -154,11 +153,11 @@ function next(){if(!S||!S.revealed)return;clearInterval(tick);S.idx++;S.deadline
  if(S.idx>=S.order.length){finish()}else{save();beginQ()}}
 function finish(){clearInterval(tick);S.done=true;save();
  var ok=0,h='';
- S.order.forEach(function(qi,i){var q=Q[qi],a=S.answers[i]||'',r=OKA(a,q);if(r)ok++;
+ S.order.forEach(function(qi,i){var q=Q[qi],a=S.answers[i]||'',r=norm(a)===norm(q.answer);if(r)ok++;
   h+='<div class="res"><img loading="lazy" decoding="async" src="'+IMGP+'t/'+q.id+'.jpg?v=b2" data-full="'+IMGP+q.id+'.jpg?v=b2" alt=""><div><div><b>Q'+(i+1)+'.</b> '+esc(q.prompt)+' <span class="muted">(Lab '+q.lab+')</span>'+(q.unc?'<span class="unc">Uncertain</span>':'')+'</div>'+
   '<div style="margin-top:6px">'+(r?'<span class="ok">&#10003;</span>':'<span class="bad">&#10007;</span>')+' Your answer: <b>'+(a.trim()?esc(a):'<span class="muted">(blank)</span>')+'</b> &nbsp;|&nbsp; Correct: <b>'+esc(q.answer)+'</b></div>'+
   '<details class="exd"><summary>Show explanation</summary>'+exHTML(q)+'</details></div></div>'});
- var bl={};S.order.forEach(function(qi,i){var q=Q[qi];bl[q.lab]=bl[q.lab]||[0,0];bl[q.lab][1]++;if(OKA(S.answers[i],q))bl[q.lab][0]++});
+ var bl={};S.order.forEach(function(qi,i){var q=Q[qi];bl[q.lab]=bl[q.lab]||[0,0];bl[q.lab][1]++;if(norm(S.answers[i])===norm(q.answer))bl[q.lab][0]++});
  $('score').textContent=ok+' / '+S.order.length+' ('+Math.round(100*ok/S.order.length)+'%)';
  $('bylab').textContent=Object.keys(bl).map(function(l){return 'Lab '+l+': '+bl[l][0]+'/'+bl[l][1]}).join('  |  ');
  $('reslist').innerHTML=h;show('end')}
@@ -172,15 +171,14 @@ $('qin').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDef
 $('qin').addEventListener('input',function(){if(S&&!S.revealed){S.pending=$('qin').value;save()}});
 $('keyb').onclick=showKey;$('backres').onclick=function(){show('end')};
 $('retake').onclick=function(){try{localStorage.removeItem(KEY)}catch(e){}setMode(MODE)};
-function mlabel(m){return m==='all'?'All labs mixed (Lab '+MIXL[0]+'–'+MIXL[MIXL.length-1]+')':'Lab '+m+' only'+(m===6?' (Respiratory · Final)':'')}
+function mlabel(m){return m==='all'?'All labs mixed (Lab '+LABS[0]+'–'+LABS[LABS.length-1]+')':'Lab '+m+' only'}
 var LABS=[];QA.forEach(function(q){if(LABS.indexOf(q.lab)<0)LABS.push(q.lab)});LABS.sort(function(a,b){return a-b});
-var MIXL=LABS.filter(function(l){return l<6});function QMIX(){return QA.filter(function(q){return q.lab<6})}
-function renderModes(){var h=['all'].concat(LABS).map(function(m){var n=m==='all'?QMIX().length:QA.filter(function(q){return q.lab===m}).length,
+function renderModes(){var h=['all'].concat(LABS).map(function(m){var n=m==='all'?QA.length:QA.filter(function(q){return q.lab===m}).length,
   s=null;try{s=JSON.parse(localStorage.getItem(KB+(m==='all'?'':'_L'+m)))}catch(e){}
   var tag=s&&s.order?(s.done?' · Done':' · In progress '+(s.idx+1)+'/'+s.order.length):'';
   return '<button class="mode'+(m===MODE?' on':'')+'" data-m="'+m+'">'+esc(mlabel(m))+' <span class="mc">'+n+' questions'+tag+'</span></button>'}).join('');
  $('modes').innerHTML=h;document.querySelectorAll('.mlbl').forEach(function(e){e.textContent=' — '+mlabel(MODE)})}
-function setMode(m){MODE=m;Q=m==='all'?QMIX():QA.filter(function(q){return q.lab===m});KEY=KB+(m==='all'?'':'_L'+m);WB=(m===6&&D.wb6)?D.wb6:D.wb;renderBank();
+function setMode(m){MODE=m;Q=m==='all'?QA:QA.filter(function(q){return q.lab===m});KEY=KB+(m==='all'?'':'_L'+m);
  clearInterval(tick);S=null;$('resume').style.display='none';$('resume').textContent='Resume saved exam';$('resinfo').textContent='';
  renderModes();initStart()}
 function toMenu(){clearInterval(tick);if(S&&!S.done&&!S.revealed&&$('exam').style.display!=='none'){S.pending=$('qin').value;save()}
